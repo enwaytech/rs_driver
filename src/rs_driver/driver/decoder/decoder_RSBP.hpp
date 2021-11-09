@@ -196,6 +196,9 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, y);
         setZ(point, z);
         setIntensity(point, intensity);
+        setYaw(point, angle_horiz * RS_ANGLE_RESOLUTION);
+        setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
+        setRange(point, distance);
       }
       else
       {
@@ -203,6 +206,9 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, NAN);
         setZ(point, NAN);
         setIntensity(point, 0);
+        setYaw(point, NAN);
+        setPitch(point, NAN);
+        setRange(point, NAN);
       }
       setRing(point, this->beam_ring_table_[channel_idx]);
       setTimestamp(point, block_timestamp);

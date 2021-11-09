@@ -54,6 +54,9 @@ DEFINE_MEMBER_CHECKER(x)
 DEFINE_MEMBER_CHECKER(y)
 DEFINE_MEMBER_CHECKER(z)
 DEFINE_MEMBER_CHECKER(intensity)
+DEFINE_MEMBER_CHECKER(yaw)
+DEFINE_MEMBER_CHECKER(pitch)
+DEFINE_MEMBER_CHECKER(range)
 DEFINE_MEMBER_CHECKER(ring)
 DEFINE_MEMBER_CHECKER(timestamp)
 #define RS_SWAP_SHORT(x) ((((x)&0xFF) << 8) | (((x)&0xFF00) >> 8))
@@ -806,6 +809,45 @@ inline typename std::enable_if<RS_HAS_MEMBER(T_Point, intensity)>::type setInten
                                                                                      const uint8_t& value)
 {
   point.intensity = value;
+}
+
+template <typename T_Point>
+inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, yaw)>::type setYaw(T_Point& point,
+                                                                          const float& value)
+{
+}
+
+template <typename T_Point>
+inline typename std::enable_if<RS_HAS_MEMBER(T_Point, yaw)>::type setYaw(T_Point& point,
+                                                                         const float& value)
+{
+  point.yaw = value;
+}
+
+template <typename T_Point>
+inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, pitch)>::type setPitch(T_Point& point,
+                                                                              const float& value)
+{
+}
+
+template <typename T_Point>
+inline typename std::enable_if<RS_HAS_MEMBER(T_Point, pitch)>::type setPitch(T_Point& point,
+                                                                             const float& value)
+{
+  point.pitch = value;
+}
+
+template <typename T_Point>
+inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, range)>::type setRange(T_Point& point,
+                                                                              const float& value)
+{
+}
+
+template <typename T_Point>
+inline typename std::enable_if<RS_HAS_MEMBER(T_Point, range)>::type setRange(T_Point& point,
+                                                                             const float& value)
+{
+  point.range = value;
 }
 
 template <typename T_Point>
