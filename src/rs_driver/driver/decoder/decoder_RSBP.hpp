@@ -199,6 +199,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setYaw(point, angle_horiz * RS_ANGLE_RESOLUTION);
         setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
         setRange(point, distance);
+        // TODO: Check here if point is self-filter point?
       }
       else
       {
@@ -210,6 +211,16 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setPitch(point, NAN);
         setRange(point, NAN);
       }
+
+      if (blk_idx % 2 == 0)
+      {
+        setNumReturn(point, 0);
+      }
+      else
+      {
+        setNumReturn(point, 1);
+      }
+
       setRing(point, this->beam_ring_table_[channel_idx]);
       setTimestamp(point, block_timestamp);
       vec.emplace_back(std::move(point));
