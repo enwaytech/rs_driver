@@ -57,8 +57,9 @@ DEFINE_MEMBER_CHECKER(intensity)
 DEFINE_MEMBER_CHECKER(yaw)
 DEFINE_MEMBER_CHECKER(pitch)
 DEFINE_MEMBER_CHECKER(range)
+DEFINE_MEMBER_CHECKER(num_returns)
+DEFINE_MEMBER_CHECKER(return_index)
 DEFINE_MEMBER_CHECKER(ring)
-DEFINE_MEMBER_CHECKER(num_return)
 DEFINE_MEMBER_CHECKER(timestamp)
 #define RS_SWAP_SHORT(x) ((((x)&0xFF) << 8) | (((x)&0xFF00) >> 8))
 #define RS_SWAP_LONG(x) ((((x)&0xFF) << 24) | (((x)&0xFF00) << 8) | (((x)&0xFF0000) >> 8) | (((x)&0xFF000000) >> 24))
@@ -851,16 +852,29 @@ inline typename std::enable_if<RS_HAS_MEMBER(T_Point, range)>::type setRange(T_P
 }
 
 template <typename T_Point>
-inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, num_return)>::type setNumReturn(T_Point& point,
-                                                                                       const uint8_t& value)
+inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, num_returns)>::type setNumReturns(T_Point& point,
+                                                                                        const uint8_t& value)
 {
 }
 
 template <typename T_Point>
-inline typename std::enable_if<RS_HAS_MEMBER(T_Point, num_return)>::type setNumReturn(T_Point& point,
-                                                                                      const uint8_t& value)
+inline typename std::enable_if<RS_HAS_MEMBER(T_Point, num_returns)>::type setNumReturns(T_Point& point,
+                                                                                       const uint8_t& value)
 {
-  point.num_return = value;
+  point.num_returns = value;
+}
+
+template <typename T_Point>
+inline typename std::enable_if<!RS_HAS_MEMBER(T_Point, return_index)>::type setReturnIndex(T_Point& point,
+                                                                                           const uint8_t& value)
+{
+}
+
+template <typename T_Point>
+inline typename std::enable_if<RS_HAS_MEMBER(T_Point, return_index)>::type setReturnIndex(T_Point& point,
+                                                                                          const uint8_t& value)
+{
+  point.return_index = value;
 }
 
 template <typename T_Point>

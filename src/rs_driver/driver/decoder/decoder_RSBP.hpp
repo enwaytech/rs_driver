@@ -126,26 +126,26 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
   double block_timestamp = this->get_point_time_func_(pkt);
   this->check_camera_trigger_func_(azimuth, pkt);
   float azi_diff = 0;
-  for (size_t blk_idx = 0; blk_idx < this->lidar_const_param_.BLOCKS_PER_PKT; blk_idx++)
+
+  std::vector<double> block_timestamps;
+  std::vector<float> azi_diffs;
+
+  for (size_t blk_idx2 = 0; blk_idx2 < this->lidar_const_param_.BLOCKS_PER_PKT; blk_idx2++)
   {
-    if (mpkt_ptr->blocks[blk_idx].id != this->lidar_const_param_.BLOCK_ID)
-    {
-      break;
-    }
-    int cur_azi = RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx].azimuth);
+    int cur_azi = RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx2].azimuth);
     if (this->echo_mode_ == ECHO_DUAL)
     {
-      if (blk_idx % 2 == 0)
+      if (blk_idx2 % 2 == 0)
       {
-        if (blk_idx == 0)
+        if (blk_idx2 == 0)
         {
           azi_diff = static_cast<float>(
-              (RS_ONE_ROUND + RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx + 2].azimuth) - cur_azi) % RS_ONE_ROUND);
+              (RS_ONE_ROUND + RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx2 + 2].azimuth) - cur_azi) % RS_ONE_ROUND);
         }
         else
         {
           azi_diff = static_cast<float>(
-              (RS_ONE_ROUND + cur_azi - RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx - 2].azimuth)) % RS_ONE_ROUND);
+              (RS_ONE_ROUND + cur_azi - RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx2 - 2].azimuth)) % RS_ONE_ROUND);
           block_timestamp = (azi_diff > 100) ? (block_timestamp + this->fov_time_jump_diff_) :
                                                (block_timestamp + this->time_duration_between_blocks_);
         }
@@ -153,21 +153,36 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
     }
     else
     {
-      if (blk_idx == 0)  // 12
+      if (blk_idx2 == 0)  // 12
       {
-        azi_diff = static_cast<float>((RS_ONE_ROUND + RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx + 1].azimuth) - cur_azi) %
+        azi_diff = static_cast<float>((RS_ONE_ROUND + RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx2 + 1].azimuth) - cur_azi) %
                                       RS_ONE_ROUND);
       }
       else
       {
-        azi_diff = static_cast<float>((RS_ONE_ROUND + cur_azi - RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx - 1].azimuth)) %
+        azi_diff = static_cast<float>((RS_ONE_ROUND + cur_azi - RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx2 - 1].azimuth)) %
                                       RS_ONE_ROUND);
         block_timestamp = (azi_diff > 100) ? (block_timestamp + this->fov_time_jump_diff_) :
                                              (block_timestamp + this->time_duration_between_blocks_);
       }
     }
+    block_timestamps.push_back(block_timestamp);
+    azi_diffs.push_back(azi_diff);
+  }
+
+  for (int blk_idx = this->lidar_const_param_.BLOCKS_PER_PKT - 1; blk_idx >= 0; blk_idx--)
+  {
+    if (mpkt_ptr->blocks[blk_idx].id != this->lidar_const_param_.BLOCK_ID)
+    {
+      break;
+    }
+    int cur_azi = RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx].azimuth);
+
+    block_timestamp = block_timestamps.at(blk_idx);
+    azi_diff = azi_diffs.at(blk_idx);
+
     azi_diff = (azi_diff > 100) ? this->azi_diff_between_block_theoretical_ : azi_diff;
-    for (int channel_idx = 0; channel_idx < this->lidar_const_param_.CHANNELS_PER_BLOCK; channel_idx++)
+    for (int channel_idx = this->lidar_const_param_.CHANNELS_PER_BLOCK - 1; channel_idx >= 0; channel_idx--)
     {
       float azi_channel_ori = cur_azi + azi_diff * this->lidar_const_param_.DSR_TOFFSET *
                                             this->lidar_const_param_.FIRING_FREQUENCY *
@@ -185,6 +200,24 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
            (!this->angle_flag_ &&
             ((azi_channel_final >= this->start_angle_) || (azi_channel_final <= this->end_angle_)))))
       {
+
+        if (this->echo_mode_ == ECHO_DUAL)
+        {
+          if(blk_idx % 2 == 0)
+          {
+            setReturnIndex(point, 1U);
+          }
+          else
+          {
+            setReturnIndex(point, 0U);
+
+          }
+        }
+        else
+        {
+          setReturnIndex(point, 0U);
+        }
+
         float x = distance * this->checkCosTable(angle_vert) * this->checkCosTable(azi_channel_final) +
                   this->lidar_const_param_.RX * this->checkCosTable(angle_horiz);
         float y = -distance * this->checkCosTable(angle_vert) * this->checkSinTable(azi_channel_final) -
@@ -192,6 +225,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         float z = distance * this->checkSinTable(angle_vert) + this->lidar_const_param_.RZ;
         uint8_t intensity = mpkt_ptr->blocks[blk_idx].channels[channel_idx].intensity;
         this->transformPoint(x, y, z);
+
         setX(point, x);
         setY(point, y);
         setZ(point, z);
@@ -199,7 +233,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setYaw(point, angle_horiz * RS_ANGLE_RESOLUTION);
         setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
         setRange(point, distance);
-        // TODO: Check here if point is self-filter point?
+        setNumReturns(point, 1U);
       }
       else
       {
@@ -212,20 +246,32 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setRange(point, NAN);
       }
 
-      if (blk_idx % 2 == 0)
-      {
-        setNumReturn(point, 0);
-      }
-      else
-      {
-        setNumReturn(point, 1);
-      }
 
       setRing(point, this->beam_ring_table_[channel_idx]);
       setTimestamp(point, block_timestamp);
       vec.emplace_back(std::move(point));
     }
+
   }
+  std::reverse(vec.begin(), vec.end());
+  // brute force the number_of_returns
+  for (auto& p : vec)
+  {
+    for (auto& b : vec)
+    {
+      if (p.yaw == b.yaw && p.pitch == b.pitch)
+      {
+        if(p.range != b.range)
+        {
+          setNumReturns(p, 2U);
+          break;
+        }
+      }
+    }
+  }
+
+  #endif
+
   return RSDecoderResult::DECODE_OK;
 }
 
