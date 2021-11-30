@@ -270,8 +270,6 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
     }
   }
 
-  #endif
-
   return RSDecoderResult::DECODE_OK;
 }
 
