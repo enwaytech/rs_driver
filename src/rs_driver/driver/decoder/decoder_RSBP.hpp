@@ -196,6 +196,11 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, y);
         setZ(point, z);
         setIntensity(point, intensity);
+        setYaw(point, angle_horiz * RS_ANGLE_RESOLUTION);
+        setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
+        setRange(point, distance);
+        setReturnIndex(point, 0U);
+        setNumReturns(point, 1);
       }
       else
       {
@@ -203,10 +208,49 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, NAN);
         setZ(point, NAN);
         setIntensity(point, 0);
+        setYaw(point, NAN);
+        setPitch(point, NAN);
+        setRange(point, NAN);
+        setNumReturns(point, 0U);
+        setReturnIndex(point, 0U);
       }
       setRing(point, this->beam_ring_table_[channel_idx]);
       setTimestamp(point, block_timestamp);
       vec.emplace_back(std::move(point));
+    }
+  }
+
+  if (this->echo_mode_ == ECHO_DUAL)
+  {
+    const uint16_t channels_per_block {this->lidar_const_param_.CHANNELS_PER_BLOCK};
+    if (vec.size() > 2 * channels_per_block)
+    {
+      for (auto it = vec.begin(); it != vec.end(); it++)
+      {
+        for (auto at = it; at != vec.end(); at++)
+        {
+          if (it->yaw == at->yaw && it->pitch == at->pitch)
+          {
+            if(it->range != at->range)
+            {
+              if(it->range < at->range)
+              {
+                setReturnIndex(*it, 0U);
+                setReturnIndex(*at, 1U);
+              }
+              else
+              {
+                setReturnIndex(*it, 1U);
+                setReturnIndex(*at, 0U);
+              }
+
+              setNumReturns(*it, 2U);
+              setNumReturns(*at, 2U);
+              break;
+            }
+          }
+        }
+      }
     }
   }
   return RSDecoderResult::DECODE_OK;
