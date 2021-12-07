@@ -225,28 +225,18 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
     const uint16_t channels_per_block {this->lidar_const_param_.CHANNELS_PER_BLOCK};
     if (vec.size() > 2 * channels_per_block)
     {
-      for (auto it = vec.begin(); it != vec.end(); it++)
+      for (auto it = vec.begin(); it != vec.end() - channels_per_block; it++)
       {
-        for (auto at = it; at != vec.end(); at++)
+        auto at = it + channels_per_block;
         {
           if (it->yaw == at->yaw && it->pitch == at->pitch)
           {
             if(it->range != at->range)
             {
-              if(it->range < at->range)
-              {
-                setReturnIndex(*it, 0U);
-                setReturnIndex(*at, 1U);
-              }
-              else
-              {
-                setReturnIndex(*it, 1U);
-                setReturnIndex(*at, 0U);
-              }
-
+              setReturnIndex(*it, 1U);
               setNumReturns(*it, 2U);
+              setReturnIndex(*at, 0U);
               setNumReturns(*at, 2U);
-              break;
             }
           }
         }
