@@ -102,6 +102,7 @@ private:
                                                                const size_t& height)>
       point_cloud_transform_func_;
   typename PointCloudMsg<T_Point>::PointCloudPtr point_cloud_ptr_;
+  typename PointCloudMsg<T_Point>::PointCloudPtr output_point_cloud_ptr_;
 };
 
 template <typename T_Point>
@@ -110,6 +111,7 @@ inline LidarDriverImpl<T_Point>::LidarDriverImpl()
 {
   thread_pool_ptr_ = std::make_shared<ThreadPool>();
   point_cloud_ptr_ = std::make_shared<typename PointCloudMsg<T_Point>::PointCloud>();
+  output_point_cloud_ptr_ = std::make_shared<typename PointCloudMsg<T_Point>::PointCloud>();
   scan_ptr_ = std::make_shared<ScanMsg>();
 }
 
@@ -179,7 +181,7 @@ inline void LidarDriverImpl<T_Point>::initPointCloudTransFunc()
           row_major_ptr->at(i * width + j) = input_ptr->at(j * height + i);
         }
       }
-      return row_major_ptr;
+      return input_ptr;
     };
   }
   else
@@ -262,8 +264,7 @@ inline bool LidarDriverImpl<T_Point>::getLidarTemperature(double& input_temperat
 template <typename T_Point>
 inline bool LidarDriverImpl<T_Point>::decodeMsopScan(const ScanMsg& scan_msg, PointCloudMsg<T_Point>& point_cloud_msg)
 {
-  typename PointCloudMsg<T_Point>::PointCloudPtr output_point_cloud_ptr =
-      std::make_shared<typename PointCloudMsg<T_Point>::PointCloud>();
+  output_point_cloud_ptr_->clear();
   if (!difop_flag_ && driver_param_.wait_for_difop)
   {
     ndifop_count_++;
@@ -272,7 +273,7 @@ inline bool LidarDriverImpl<T_Point>::decodeMsopScan(const ScanMsg& scan_msg, Po
       reportError(Error(ERRCODE_NODIFOPRECV));
       ndifop_count_ = 0;
     }
-    point_cloud_msg.point_cloud_ptr = output_point_cloud_ptr;
+    point_cloud_msg.point_cloud_ptr = output_point_cloud_ptr_;
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     return false;
   }
@@ -303,9 +304,9 @@ inline bool LidarDriverImpl<T_Point>::decodeMsopScan(const ScanMsg& scan_msg, Po
   }
   for (auto iter : pointcloud_one_frame)
   {
-    output_point_cloud_ptr->insert(output_point_cloud_ptr->end(), iter.begin(), iter.end());
+    output_point_cloud_ptr_->insert(output_point_cloud_ptr_->end(), iter.begin(), iter.end());
   }
-  point_cloud_msg.point_cloud_ptr = point_cloud_transform_func_(output_point_cloud_ptr, height);
+  point_cloud_msg.point_cloud_ptr = point_cloud_transform_func_(output_point_cloud_ptr_, height);
   point_cloud_msg.height = height;
   point_cloud_msg.width = point_cloud_msg.point_cloud_ptr->size() / point_cloud_msg.height;
   setPointCloudMsgHeader(point_cloud_msg);
@@ -415,7 +416,7 @@ inline void LidarDriverImpl<T_Point>::processMsop()
     PacketMsg pkt = msop_pkt_queue_.popFront();
     int height = 1;
     int ret = lidar_decoder_ptr_->processMsopPkt(pkt.packet.data(), *point_cloud_ptr_, height);
-    scan_ptr_->packets.emplace_back(std::move(pkt));
+    scan_ptr_->packets.emplace_back(pkt);
     if ((ret == DECODE_OK || ret == FRAME_SPLIT))
     {
       if (ret == FRAME_SPLIT)

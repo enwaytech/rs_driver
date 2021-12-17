@@ -97,6 +97,7 @@ private:
   boost::asio::io_service difop_io_service_;
   std::vector<std::function<void(const PacketMsg&)>> difop_cb_;
   std::vector<std::function<void(const PacketMsg&)>> msop_cb_;
+  char* precv_buffer_;
 };
 
 inline Input::Input(const LidarType& type, const RSInputParam& input_param,
@@ -116,6 +117,8 @@ inline Input::Input(const LidarType& type, const RSInputParam& input_param,
       difop_pkt_length_ = MECH_PKT_LEN;
       break;
   }
+  precv_buffer_ = (char*)malloc(msop_pkt_length_);
+
 }
 
 inline Input::~Input()
@@ -129,6 +132,7 @@ inline Input::~Input()
   difop_sock_ptr_.reset();
   msop_deadline_.reset();
   difop_deadline_.reset();
+  free(precv_buffer_);
 }
 
 inline bool Input::init()
@@ -271,14 +275,13 @@ inline bool Input::setSocket(const std::string& pkt_type)
 
 inline void Input::getMsopPacket()
 {
-  char* precv_buffer = (char*)malloc(msop_pkt_length_);
   while (msop_thread_.start_.load())
   {
     msop_deadline_->expires_from_now(boost::posix_time::seconds(1));
     boost::system::error_code ec = boost::asio::error::would_block;
     std::size_t ret = 0;
 
-    msop_sock_ptr_->async_receive(boost::asio::buffer(precv_buffer, msop_pkt_length_),
+    msop_sock_ptr_->async_receive(boost::asio::buffer(precv_buffer_, msop_pkt_length_),
                                   boost::bind(&Input::handleReceive, _1, _2, &ec, &ret));
     do
     {
@@ -295,13 +298,12 @@ inline void Input::getMsopPacket()
       continue;
     }
     PacketMsg msg(msop_pkt_length_);
-    memcpy(msg.packet.data(), precv_buffer, msop_pkt_length_);
+    memcpy(msg.packet.data(), precv_buffer_, msop_pkt_length_);
     for (auto& iter : msop_cb_)
     {
-      iter(msg);
+      iter(msg); // fast if commented out!
     }
   }
-  free(precv_buffer);
 }
 
 inline void Input::getDifopPacket()

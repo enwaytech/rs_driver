@@ -86,6 +86,8 @@ public:
   RSDecoderResult decodeDifopPkt(const uint8_t* pkt);
   RSDecoderResult decodeMsopPkt(const uint8_t* pkt, std::vector<T_Point>& vec, int& height, int& azimuth);
   double getLidarTime(const uint8_t* pkt);
+  float azi_multi_[32];
+
 };
 
 template <typename T_Point>
@@ -102,6 +104,10 @@ inline DecoderRSBP<T_Point>::DecoderRSBP(const RSDecoderParam& param, const Lida
   if (this->param_.min_distance < 0.1f || this->param_.min_distance > this->param_.max_distance)
   {
     this->param_.min_distance = 0.1f;
+  }
+  for (unsigned int channel_idx=0; channel_idx<this->lidar_const_param_.CHANNELS_PER_BLOCK; channel_idx++)
+  {
+    this->azi_multi_[channel_idx] = this->lidar_const_param_.DSR_TOFFSET * this->lidar_const_param_.FIRING_FREQUENCY * (static_cast<float>(2 * (channel_idx % 16) + (channel_idx / 16)) + static_cast<float>(channel_idx / 8 % 2) * 5.2f);
   }
 }
 
@@ -126,6 +132,8 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
   double block_timestamp = this->get_point_time_func_(pkt);
   this->check_camera_trigger_func_(azimuth, pkt);
   float azi_diff = 0;
+  T_Point point;
+  unsigned int skip_next_pkts = 0;
   for (size_t blk_idx = 0; blk_idx < this->lidar_const_param_.BLOCKS_PER_PKT; blk_idx++)
   {
     if (mpkt_ptr->blocks[blk_idx].id != this->lidar_const_param_.BLOCK_ID)
@@ -167,19 +175,20 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
       }
     }
     azi_diff = (azi_diff > 100) ? this->azi_diff_between_block_theoretical_ : azi_diff;
+    if (skip_next_pkts > 0)
+    {
+      --skip_next_pkts;
+      continue;
+    }
     for (int channel_idx = 0; channel_idx < this->lidar_const_param_.CHANNELS_PER_BLOCK; channel_idx++)
     {
-      float azi_channel_ori = cur_azi + azi_diff * this->lidar_const_param_.DSR_TOFFSET *
-                                            this->lidar_const_param_.FIRING_FREQUENCY *
-                                            (static_cast<float>(2 * (channel_idx % 16) + (channel_idx / 16)) +
-                                             static_cast<float>(channel_idx / 8 % 2) * 5.2f);
+      float azi_channel_ori = cur_azi + azi_diff * this->azi_multi_[channel_idx];
       int azi_channel_final = this->azimuthCalibration(azi_channel_ori, channel_idx);
       float distance = RS_SWAP_SHORT(mpkt_ptr->blocks[blk_idx].channels[channel_idx].distance) * RS_DIS_RESOLUTION;
       int angle_horiz = static_cast<int>(azi_channel_ori + RS_ONE_ROUND) % RS_ONE_ROUND;
       int angle_vert = ((this->vert_angle_list_[channel_idx]) + RS_ONE_ROUND) % RS_ONE_ROUND;
 
       // store to point cloud buffer
-      T_Point point;
       if ((distance <= this->param_.max_distance && distance >= this->param_.min_distance) &&
           ((this->angle_flag_ && azi_channel_final >= this->start_angle_ && azi_channel_final <= this->end_angle_) ||
            (!this->angle_flag_ &&
@@ -191,7 +200,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
                   this->lidar_const_param_.RX * this->checkSinTable(angle_horiz);
         float z = distance * this->checkSinTable(angle_vert) + this->lidar_const_param_.RZ;
         uint8_t intensity = mpkt_ptr->blocks[blk_idx].channels[channel_idx].intensity;
-        this->transformPoint(x, y, z);
+        //this->transformPoint(x, y, z);
         setX(point, x);
         setY(point, y);
         setZ(point, z);
@@ -216,7 +225,14 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
       }
       setRing(point, this->beam_ring_table_[channel_idx]);
       setTimestamp(point, block_timestamp);
-      vec.emplace_back(std::move(point));
+      vec.emplace_back(point);
+    }
+    if (this->echo_mode_ == ECHO_DUAL)
+    {
+      if (blk_idx % 2 == 1)
+      {
+        skip_next_pkts = 4;
+      }
     }
   }
 
@@ -225,24 +241,26 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
     const uint16_t channels_per_block {this->lidar_const_param_.CHANNELS_PER_BLOCK};
     if (vec.size() > 2 * channels_per_block)
     {
-      for (auto it = vec.begin(); it != vec.end() - channels_per_block; it++)
+      for (size_t i = 0; i < vec.size() - channels_per_block; i++)
       {
-        auto at = it + channels_per_block;
+        if (i % channels_per_block == 0 && i / channels_per_block % 2 == 1)
         {
-          if (it->yaw == at->yaw && it->pitch == at->pitch)
-          {
-            if(it->range != at->range)
-            {
-              setReturnIndex(*it, 1U);
-              setNumReturns(*it, 2U);
-              setReturnIndex(*at, 0U);
-              setNumReturns(*at, 2U);
-            }
-          }
+          i += channels_per_block;
+        }
+
+        auto first_ret = &vec.at(i);
+        auto second_ret = &vec.at(i + channels_per_block);
+        if(first_ret->range != second_ret->range)
+        {
+          setReturnIndex(*first_ret, 0U);
+          setNumReturns(*first_ret, 2U);
+          setReturnIndex(*second_ret, 1U);
+          setNumReturns(*second_ret, 2U);
         }
       }
     }
   }
+
   return RSDecoderResult::DECODE_OK;
 }
 
