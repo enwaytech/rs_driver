@@ -810,7 +810,7 @@ template <typename T_Point>
 inline typename std::enable_if<RS_HAS_MEMBER(T_Point, intensity)>::type setIntensity(T_Point& point,
                                                                                      const uint8_t& value)
 {
-  point.intensity = static_cast<float>(value / 255.0f);
+  point.intensity = value;
 }
 
 template <typename T_Point>
