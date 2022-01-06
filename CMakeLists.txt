@@ -12,7 +12,7 @@ option(COMPILE_DEMOS "Build rs_driver demos" OFF)
 option(COMPILE_TOOLS "Build point cloud visualization tool" OFF)
 
 #=============================
-#  Compile Demos&Tools
+#  Compile Transformation
 #=============================
 option(ENABLE_TRANSFORM "Enable transform functions" OFF)
 
