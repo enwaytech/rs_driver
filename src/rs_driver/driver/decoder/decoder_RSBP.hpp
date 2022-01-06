@@ -200,7 +200,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
                   this->lidar_const_param_.RX * this->checkSinTable(angle_horiz);
         float z = distance * this->checkSinTable(angle_vert) + this->lidar_const_param_.RZ;
         uint8_t intensity = mpkt_ptr->blocks[blk_idx].channels[channel_idx].intensity;
-        //this->transformPoint(x, y, z);
+        this->transformPoint(x, y, z);
         setX(point, x);
         setY(point, y);
         setZ(point, z);
@@ -208,8 +208,31 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setYaw(point, angle_horiz * RS_ANGLE_RESOLUTION);
         setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
         setRange(point, distance);
-        setReturnIndex(point, 0U);
-        setNumReturns(point, 1);
+
+        if (blk_idx % 2 == 0)
+        {
+          setReturnIndex(point, 0U);
+          setNumReturns(point, 1U);
+        }
+        else
+        {
+          auto& first_return = vec.at(vec.size() - this->lidar_const_param_.CHANNELS_PER_BLOCK);
+          if (distance != first_return.range)
+          {
+            if (distance < first_return.range)
+            {
+              setReturnIndex(point, 0U);
+              setReturnIndex(first_return, 1U);
+            }
+            else
+            {
+              setReturnIndex(point, 1U);
+              setReturnIndex(first_return, 0U);
+            }
+            setNumReturns(point, 2U);
+            setNumReturns(first_return, 2U);
+          }
+        }
       }
       else
       {
@@ -232,31 +255,6 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
       if (blk_idx % 2 == 1)
       {
         skip_next_pkts = 4;
-      }
-    }
-  }
-
-  if (this->echo_mode_ == ECHO_DUAL)
-  {
-    const uint16_t channels_per_block {this->lidar_const_param_.CHANNELS_PER_BLOCK};
-    if (vec.size() > 2 * channels_per_block)
-    {
-      for (size_t i = 0; i < vec.size() - channels_per_block; i++)
-      {
-        if (i % channels_per_block == 0 && i / channels_per_block % 2 == 1)
-        {
-          i += channels_per_block;
-        }
-
-        auto first_ret = &vec.at(i);
-        auto second_ret = &vec.at(i + channels_per_block);
-        if(first_ret->range != second_ret->range)
-        {
-          setReturnIndex(*first_ret, 0U);
-          setNumReturns(*first_ret, 2U);
-          setReturnIndex(*second_ret, 1U);
-          setNumReturns(*second_ret, 2U);
-        }
       }
     }
   }
