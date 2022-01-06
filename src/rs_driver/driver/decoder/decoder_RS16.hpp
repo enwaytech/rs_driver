@@ -183,6 +183,10 @@ inline RSDecoderResult DecoderRS16<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, y);
         setZ(point, z);
         setIntensity(point, intensity);
+        setYaw(point, angle_horiz_ori * RS_ANGLE_RESOLUTION);
+        setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
+        setRange(point, distance);
+
       }
       else
       {
@@ -190,6 +194,12 @@ inline RSDecoderResult DecoderRS16<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setY(point, NAN);
         setZ(point, NAN);
         setIntensity(point, 0);
+        setYaw(point, NAN);
+        setPitch(point, NAN);
+        setRange(point, NAN);
+        setNumReturns(point, 0U);
+        setReturnIndex(point, 0U);
+
       }
       setRing(point, this->beam_ring_table_[channel_idx % 16]);
       if (this->echo_mode_ != ECHO_DUAL && channel_idx > 15)
