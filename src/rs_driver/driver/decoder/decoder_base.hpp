@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rs_driver/common/common_header.h>
 #include <rs_driver/utility/time.h>
 #include <rs_driver/driver/driver_param.h>
+#include <iomanip>
 namespace robosense
 {
 namespace lidar
@@ -289,7 +290,9 @@ public:
   virtual void regRecvCallback(const std::function<void(const CameraTrigger&)>& callback);  ///< Camera trigger
   virtual double getLidarTemperature();
   virtual double getLidarTime(const uint8_t* pkt) = 0;
-
+  virtual std::string getSerialNumber();
+  virtual RSEchoMode getReturnMode();
+  virtual int getChannelsPerBlock();
 protected:
   virtual float computeTemperature(const uint16_t& temp_raw);
   virtual float computeTemperature(const uint8_t& temp_low, const uint8_t& temp_high);
@@ -340,6 +343,7 @@ protected:
   std::vector<std::function<void(const CameraTrigger&)>> camera_trigger_cb_vec_;
   std::function<double(const uint8_t*)> get_point_time_func_;
   std::function<void(const int&, const uint8_t*)> check_camera_trigger_func_;
+  RSSn sn_;
 
 private:
   std::vector<double> cos_lookup_table_;
@@ -367,6 +371,7 @@ inline DecoderBase<T_Point>::DecoderBase(const RSDecoderParam& param, const Lida
   , time_duration_between_blocks_(0)
   , current_temperature_(0)
   , azi_diff_between_block_theoretical_(20)
+  , sn_{0}
 {
   if (cut_angle_ > RS_ONE_ROUND)
   {
@@ -507,6 +512,35 @@ inline double DecoderBase<T_Point>::getLidarTemperature()
 {
   return current_temperature_;
 }
+
+template <typename T_Point>
+inline std::string DecoderBase<T_Point>::getSerialNumber()
+{
+  char buffer[12];
+  for (unsigned int i = 0; i < 6; i++)
+  {
+    sprintf(&buffer[i*2], "%02x", this->sn_.num[i]);
+  }
+  for (auto& serial : buffer)
+  {
+    serial = toupper(serial);
+  }
+
+  return std::string(buffer);
+}
+
+template <typename T_Point>
+inline RSEchoMode DecoderBase<T_Point>::getReturnMode()
+{
+  return this->echo_mode_;
+}
+
+template <typename T_Point>
+inline int DecoderBase<T_Point>::getChannelsPerBlock()
+{
+  return this->lidar_const_param_.CHANNELS_PER_BLOCK;
+}
+
 
 template <typename T_Point>
 inline void DecoderBase<T_Point>::loadCalibrationFile(const std::string& angle_path)
@@ -654,6 +688,7 @@ inline void DecoderBase<T_Point>::decodeDifopCommon(const uint8_t* pkt, const Li
   this->azi_diff_between_block_theoretical_ =
       (RS_ONE_ROUND / this->lidar_const_param_.BLOCKS_PER_PKT) /
       static_cast<float>(this->pkts_per_frame_);  ///< ((rpm/60)*360)/pkts_rate/blocks_per_pkt
+  this->sn_ = dpkt_ptr->sn; // save serial number
 }
 
 template <typename T_Point>

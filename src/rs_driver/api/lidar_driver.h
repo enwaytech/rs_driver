@@ -157,6 +157,36 @@ public:
   }
 
   /**
+   * @brief Get the lidar serial number
+   * @param serial_number The variable to store serial number
+   * @return if get temperature successfully, return true; else return false
+   */
+  inline bool getSerialNumber(std::string& serial_number)
+  {
+    return driver_ptr_->getSerialNumber(serial_number);
+  }
+
+  /**
+   * @brief Get the lidar return mode
+   * @param return_mode The variable to store return mode 0 = SINGLE_RETURN 1 = DUAL_RETURN
+   * @return if get temperature successfully, return true; else return false
+   */
+  inline bool getReturnMode(int& return_mode)
+  {
+    return driver_ptr_->getReturnMode(return_mode);
+  }
+
+  /**
+   * @brief Get channels per block parameter from the lidar
+   * @param channels_per_block The variable to store the channels per block parameter
+   * @return if get temperature successfully, return true; else return false
+   */
+  inline bool getChannelsPerBlock(int& channels_per_block)
+  {
+    return driver_ptr_->getChannelsPerBlock(channels_per_block);
+  }
+
+  /**
    * @brief Decode lidar scan messages to point cloud
    * @note This function will only work after decodeDifopPkt is called unless wait_for_difop is set to false
    * @param pkt_scan_msg The lidar scan message

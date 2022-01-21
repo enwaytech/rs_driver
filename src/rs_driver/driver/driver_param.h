@@ -166,8 +166,7 @@ typedef struct RSDriverParam  ///< The LiDAR driver parameter
     RS_INFOL << "             RoboSense Driver Parameters " << RS_REND;
     RS_INFOL << "angle_path: " << angle_path << RS_REND;
     RS_INFOL << "frame_id: " << frame_id << RS_REND;
-    RS_INFOL << "lidar_type: ";
-    RS_INFO << lidarTypeToStr(lidar_type) << RS_REND;
+    RS_INFO << "lidar_type: " << lidarTypeToStr(lidar_type) << RS_REND;
     RS_INFOL << "------------------------------------------------------" << RS_REND;
   }
   static std::string lidarTypeToStr(const LidarType& type)

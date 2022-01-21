@@ -209,7 +209,7 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
         setRange(point, distance);
 
-        if(this->echo_mode_ == ECHO_DUAL && blk_idx % 2 == 1)
+        if (this->echo_mode_ == ECHO_DUAL && blk_idx % 2 == 1)
         {
           auto& first_return = vec.at(vec.size() - this->lidar_const_param_.CHANNELS_PER_BLOCK);
           if (distance != first_return.range)

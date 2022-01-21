@@ -61,6 +61,9 @@ public:
   void regRecvCallback(const std::function<void(const CameraTrigger&)>& callback);
   void regExceptionCallback(const std::function<void(const Error&)>& callback);
   bool getLidarTemperature(double& input_temperature);
+  bool getSerialNumber(std::string& serial_number);
+  bool getReturnMode(int& return_mode);
+  bool getChannelsPerBlock(int& channels_per_block);
   bool decodeMsopScan(const ScanMsg& scan_msg, PointCloudMsg<T_Point>& point_cloud_msg);
   void decodeDifopPkt(const PacketMsg& msg);
 
@@ -256,6 +259,39 @@ inline bool LidarDriverImpl<T_Point>::getLidarTemperature(double& input_temperat
   if (lidar_decoder_ptr_ != nullptr)
   {
     input_temperature = lidar_decoder_ptr_->getLidarTemperature();
+    return true;
+  }
+  return false;
+}
+
+template <typename T_Point>
+inline bool LidarDriverImpl<T_Point>::getSerialNumber(std::string& serial_number)
+{
+  if (lidar_decoder_ptr_ != nullptr)
+  {
+    serial_number = lidar_decoder_ptr_->getSerialNumber();
+    return true;
+  }
+  return false;
+}
+
+template <typename T_Point>
+inline bool LidarDriverImpl<T_Point>::getReturnMode(int& return_mode)
+{
+  if (lidar_decoder_ptr_ != nullptr)
+  {
+    return_mode = lidar_decoder_ptr_->getReturnMode();
+    return true;
+  }
+  return false;
+}
+
+template <typename T_Point>
+inline bool LidarDriverImpl<T_Point>::getChannelsPerBlock(int& channels_per_block)
+{
+  if (lidar_decoder_ptr_ != nullptr)
+  {
+    channels_per_block = lidar_decoder_ptr_->getChannelsPerBlock();
     return true;
   }
   return false;
