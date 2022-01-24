@@ -106,6 +106,7 @@ typedef struct RSDecoderParam  ///< LiDAR decoder parameter
   bool use_lidar_clock = false;        ///< true: use LiDAR clock as timestamp; false: use system clock as timestamp
   RSTransformParam transform_param;    ///< Used to transform points
   RSCameraTriggerParam trigger_param;  ///< Used to trigger camera
+  uint16_t dual_return_downsample_ratio; ///< Ratio to use to downsample RSBP lidar
   void print() const                  
   {
     transform_param.print();
@@ -120,6 +121,7 @@ typedef struct RSDecoderParam  ///< LiDAR decoder parameter
     RS_INFOL << "split_frame_mode: " << split_frame_mode << RS_REND;
     RS_INFOL << "num_pkts_split: " << num_pkts_split << RS_REND;
     RS_INFOL << "cut_angle: " << cut_angle << RS_REND;
+    RS_INFOL << "dual_return_downsample_ratio: " << dual_return_downsample_ratio << RS_REND;
     RS_INFO << "------------------------------------------------------" << RS_REND;
   }
 } RSDecoderParam;

@@ -87,7 +87,6 @@ public:
   RSDecoderResult decodeMsopPkt(const uint8_t* pkt, std::vector<T_Point>& vec, int& height, int& azimuth);
   double getLidarTime(const uint8_t* pkt);
   float azi_multi_[32];
-
 };
 
 template <typename T_Point>
@@ -108,6 +107,11 @@ inline DecoderRSBP<T_Point>::DecoderRSBP(const RSDecoderParam& param, const Lida
   for (unsigned int channel_idx=0; channel_idx<this->lidar_const_param_.CHANNELS_PER_BLOCK; channel_idx++)
   {
     this->azi_multi_[channel_idx] = this->lidar_const_param_.DSR_TOFFSET * this->lidar_const_param_.FIRING_FREQUENCY * (static_cast<float>(2 * (channel_idx % 16) + (channel_idx / 16)) + static_cast<float>(channel_idx / 8 % 2) * 5.2f);
+  }
+
+  if (this->param_.dual_return_downsample_ratio < 1)
+  {
+    this->param_.dual_return_downsample_ratio = 1;
   }
 }
 
@@ -250,12 +254,10 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
       setTimestamp(point, block_timestamp);
       vec.emplace_back(point);
     }
-    if (this->echo_mode_ == ECHO_DUAL)
+
+    if (this->echo_mode_ == ECHO_DUAL && blk_idx % 2 == 1)
     {
-      if (blk_idx % 2 == 1)
-      {
-        skip_next_pkts = 4;
-      }
+      skip_next_pkts = (this->param_.dual_return_downsample_ratio - 1) * 2;
     }
   }
 

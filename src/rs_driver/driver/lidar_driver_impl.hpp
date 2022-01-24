@@ -63,7 +63,7 @@ public:
   bool getLidarTemperature(double& input_temperature);
   bool getSerialNumber(std::string& serial_number);
   bool getReturnMode(int& return_mode);
-  bool getChannelsPerBlock(int& channels_per_block);
+  bool getChannelsPerBlock(unsigned int& channels_per_block);
   bool decodeMsopScan(const ScanMsg& scan_msg, PointCloudMsg<T_Point>& point_cloud_msg);
   void decodeDifopPkt(const PacketMsg& msg);
 
@@ -287,7 +287,7 @@ inline bool LidarDriverImpl<T_Point>::getReturnMode(int& return_mode)
 }
 
 template <typename T_Point>
-inline bool LidarDriverImpl<T_Point>::getChannelsPerBlock(int& channels_per_block)
+inline bool LidarDriverImpl<T_Point>::getChannelsPerBlock(unsigned int& channels_per_block)
 {
   if (lidar_decoder_ptr_ != nullptr)
   {

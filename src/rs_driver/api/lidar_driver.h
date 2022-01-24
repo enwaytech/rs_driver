@@ -181,7 +181,7 @@ public:
    * @param channels_per_block The variable to store the channels per block parameter
    * @return if get temperature successfully, return true; else return false
    */
-  inline bool getChannelsPerBlock(int& channels_per_block)
+  inline bool getChannelsPerBlock(unsigned int& channels_per_block)
   {
     return driver_ptr_->getChannelsPerBlock(channels_per_block);
   }

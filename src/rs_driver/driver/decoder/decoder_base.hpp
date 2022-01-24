@@ -292,7 +292,9 @@ public:
   virtual double getLidarTime(const uint8_t* pkt) = 0;
   virtual std::string getSerialNumber();
   virtual RSEchoMode getReturnMode();
-  virtual int getChannelsPerBlock();
+  virtual unsigned int getChannelsPerBlock();
+  virtual void setDownsampleRatio(unsigned int ratio);
+
 protected:
   virtual float computeTemperature(const uint16_t& temp_raw);
   virtual float computeTemperature(const uint8_t& temp_low, const uint8_t& temp_high);
@@ -344,7 +346,7 @@ protected:
   std::function<double(const uint8_t*)> get_point_time_func_;
   std::function<void(const int&, const uint8_t*)> check_camera_trigger_func_;
   RSSn sn_;
-
+  unsigned int downsample_ratio_;
 private:
   std::vector<double> cos_lookup_table_;
   std::vector<double> sin_lookup_table_;
@@ -536,11 +538,16 @@ inline RSEchoMode DecoderBase<T_Point>::getReturnMode()
 }
 
 template <typename T_Point>
-inline int DecoderBase<T_Point>::getChannelsPerBlock()
+inline unsigned int DecoderBase<T_Point>::getChannelsPerBlock()
 {
-  return this->lidar_const_param_.CHANNELS_PER_BLOCK;
+  return static_cast<unsigned int>(this->lidar_const_param_.CHANNELS_PER_BLOCK);
 }
 
+template <typename T_Point>
+inline void DecoderBase<T_Point>::setDownsampleRatio(unsigned int ratio)
+{
+  this->downsample_ratio_ = ratio;
+}
 
 template <typename T_Point>
 inline void DecoderBase<T_Point>::loadCalibrationFile(const std::string& angle_path)
