@@ -184,7 +184,15 @@ inline RSDecoderResult DecoderRS16<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
         setZ(point, z);
         setIntensity(point, intensity);
         setYaw(point, angle_horiz_ori * RS_ANGLE_RESOLUTION);
-        setPitch(point, angle_vert * RS_ANGLE_RESOLUTION);
+
+        // keep the pitch angle between -180 and +180 deg:
+        float pitch = angle_vert * RS_ANGLE_RESOLUTION;
+        constexpr float full_rotation {360.0};
+        if (fabs(pitch - full_rotation) < fabs(pitch))
+        {
+          pitch = pitch - full_rotation;
+        }
+        setPitch(point, pitch);
         setRange(point, distance);
         setNumReturns(point, 1U);
         setReturnIndex(point, 0U);

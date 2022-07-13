@@ -202,7 +202,9 @@ inline RSDecoderResult DecoderRSBP<T_Point>::decodeMsopPkt(const uint8_t* pkt, s
                   this->lidar_const_param_.RX * this->checkCosTable(angle_horiz);
         float y = -distance * this->checkCosTable(angle_vert) * this->checkSinTable(azi_channel_final) -
                   this->lidar_const_param_.RX * this->checkSinTable(angle_horiz);
-        float z = distance * this->checkSinTable(angle_vert) + this->lidar_const_param_.RZ;
+        // Change by ENWAY: removed offset from RZ, because the yaw, pitch and range values are in
+        // lidar frame and not the mount
+        float z = distance * this->checkSinTable(angle_vert); //+ this->lidar_const_param_.RZ;
         uint8_t intensity = mpkt_ptr->blocks[blk_idx].channels[channel_idx].intensity;
         this->transformPoint(x, y, z);
         setX(point, x);
